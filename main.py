@@ -161,8 +161,7 @@ class StandaloneCFOBot:
                 
             await update.message.reply_text("Thinking... 🧠")
             client = OdooClient(url, db, uname, pwd)
-            os.environ["GOOGLE_API_KEY"] = gkey
-            intelligence = IntelligenceEngine(client)
+            intelligence = IntelligenceEngine(client, gemini_key=gkey)
             answer = intelligence.ask(query)
             await update.message.reply_text(answer)
             

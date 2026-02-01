@@ -27,7 +27,7 @@ class OdooClient:
             self.authenticate()
         
         # Read-Only Safety Lock: Only allow read-based methods
-        allowed_methods = ['search', 'read', 'search_read', 'fields_get', 'get_version']
+        allowed_methods = ['search', 'read', 'search_read', 'fields_get', 'get_version', 'name_get', 'read_group']
         if method not in allowed_methods:
             raise PermissionError(f"Write access denied: Method '{method}' is restricted in Read-Only mode.")
             
@@ -60,6 +60,10 @@ class OdooClient:
 
     def unlink(self, model, ids):
         raise PermissionError("Delete access denied (Read-Only Mode)")
+
+    def execute_button(self, model, method, ids):
+        """Specifically block button execution (like 'Post' or 'Cancel')."""
+        raise PermissionError(f"Action denied: Executing buttons ({method}) is restricted in Read-Only mode.")
 
     def get_fields(self, model, attributes=None):
         attributes = attributes or ['string', 'help', 'type', 'relation']

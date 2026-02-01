@@ -4,10 +4,10 @@ import collections
 from src.logic.gemini_intelligence import GeminiIntelligence
 
 class IntelligenceEngine:
-    def __init__(self, client: OdooClient):
+    def __init__(self, client: OdooClient, gemini_key: str = None):
         self.client = client
         try:
-            self.gemini = GeminiIntelligence()
+            self.gemini = GeminiIntelligence(api_key=gemini_key)
         except Exception:
             self.gemini = None
 
