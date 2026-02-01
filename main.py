@@ -11,6 +11,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 from src.connectors.odoo_client import OdooClient
 from src.logic.intelligence_engine import IntelligenceEngine
 from src.bots.database import Session, UserConfig
+from src.logic.security import encrypt_data, decrypt_data
 
 # Ensure internal imports work for standalone structure
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -19,7 +20,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Conversation states
-SETTING_ODOO_URL, SETTING_ODOO_DB, SETTING_ODOO_USER, SETTING_ODOO_PWD, SETTING_GEMINI_KEY = range(5)
+SETTING_PIN, SETTING_ODOO_URL, SETTING_ODOO_DB, SETTING_ODOO_USER, SETTING_ODOO_PWD, SETTING_GEMINI_KEY = range(6)
 
 class StandaloneCFOBot:
     def __init__(self, token):
@@ -30,6 +31,7 @@ class StandaloneCFOBot:
         conv_handler = ConversationHandler(
             entry_points=[CommandHandler('setup', self.start_setup)],
             states={
+                SETTING_PIN: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.save_pin)],
                 SETTING_ODOO_URL: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.save_url)],
                 SETTING_ODOO_DB: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.save_db)],
                 SETTING_ODOO_USER: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.save_user)],
@@ -54,7 +56,17 @@ class StandaloneCFOBot:
         )
 
     async def start_setup(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await update.message.reply_text("Step 1/5: What is your Odoo URL? (e.g., https://company.odoo.com)")
+        await update.message.reply_text(
+            "🛡️ **OdoSight Security Setup**\n\n"
+            "First, choose a **Secret PIN** (e.g., 1234). \n"
+            "This PIN will be used to encrypt your credentials. **We will not store this PIN**, so don't lose it!",
+            parse_mode='Markdown'
+        )
+        return SETTING_PIN
+
+    async def save_pin(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        context.user_data['user_pin'] = update.message.text
+        await update.message.reply_text("Step 1/5: What is your Odoo URL?")
         return SETTING_ODOO_URL
 
     async def save_url(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -80,6 +92,7 @@ class StandaloneCFOBot:
     async def save_gemini(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         tid = str(update.effective_user.id)
         data = context.user_data
+        pin = data['user_pin']
         
         session = Session()
         user = session.query(UserConfig).filter_by(telegram_id=tid).first()
@@ -87,16 +100,22 @@ class StandaloneCFOBot:
             user = UserConfig(telegram_id=tid)
             session.add(user)
         
-        user.odoo_url = data['odoo_url']
-        user.odoo_db = data['odoo_db']
-        user.odoo_user = data['odoo_user']
-        user.odoo_password = data['odoo_pwd']
-        user.gemini_key = update.message.text
+        # Encrypt everything before saving to DB
+        user.odoo_url = encrypt_data(data['odoo_url'], pin)
+        user.odoo_db = encrypt_data(data['odoo_db'], pin)
+        user.odoo_user = encrypt_data(data['odoo_user'], pin)
+        user.odoo_password = encrypt_data(data['odoo_pwd'], pin)
+        user.gemini_key = encrypt_data(update.message.text, pin)
         
         session.commit()
         session.close()
         
-        await update.message.reply_text("✅ Setup Complete! Your OdoSight is now live. Try asking a question!")
+        await update.message.reply_text(
+            "✅ **Setup Complete with Zero-Knowledge Encryption!**\n\n"
+            "Your credentials are now scrambled in our database. Only your PIN can unlock them.\n"
+            "Try asking: 'What's my bank balance?' (I'll ask for your PIN the first time).",
+            parse_mode='Markdown'
+        )
         return ConversationHandler.END
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -120,18 +139,37 @@ class StandaloneCFOBot:
             return
 
         query = update.message.text
-        await update.message.reply_text("Thinking... 🧠")
         
-        client = OdooClient(user.odoo_url, user.odoo_db, user.odoo_user, user.odoo_password)
-        # Pass the user's specific Gemini key to the engine
-        os.environ["GOOGLE_API_KEY"] = user.gemini_key 
-        intelligence = IntelligenceEngine(client)
+        # Check if we have the PIN in the current session memory
+        if 'user_pin' not in context.user_data:
+            context.user_data['pending_query'] = query
+            await update.message.reply_text("🔐 Your session is locked. Please enter your **PIN** to continue:")
+            return
+
+        pin = context.user_data['user_pin']
         
+        # Attempt decryption
         try:
+            url = decrypt_data(user.odoo_url, pin)
+            db = decrypt_data(user.odoo_db, pin)
+            uname = decrypt_data(user.odoo_user, pin)
+            pwd = decrypt_data(user.odoo_password, pin)
+            gkey = decrypt_data(user.gemini_key, pin)
+            
+            if not all([url, db, uname, pwd, gkey]):
+                raise ValueError("Decryption failed")
+                
+            await update.message.reply_text("Thinking... 🧠")
+            client = OdooClient(url, db, uname, pwd)
+            os.environ["GOOGLE_API_KEY"] = gkey
+            intelligence = IntelligenceEngine(client)
             answer = intelligence.ask(query)
             await update.message.reply_text(answer)
-        except Exception as e:
-            await update.message.reply_text(f"❌ Error: {str(e)}")
+            
+        except Exception:
+            # If decryption fails, the PIN was wrong. Clear it.
+            context.user_data.pop('user_pin', None)
+            await update.message.reply_text("❌ Incorrect PIN. Session remains locked.")
 
     def _get_user_config(self, telegram_id):
         session = Session()
@@ -144,7 +182,6 @@ class StandaloneCFOBot:
         self.app.run_polling()
 
 if __name__ == "__main__":
-    # In a real scenario, the token would come from an ENV var
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
         print("Missing TELEGRAM_BOT_TOKEN")
