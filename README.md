@@ -1,4 +1,4 @@
-# OdoBrain Standalone App
+# OdoSight Standalone App
 
 This is a standalone Telegram bot that provides financial intelligence for Odoo ERP using Gemini 3.
 

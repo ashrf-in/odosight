@@ -45,7 +45,7 @@ class StandaloneCFOBot:
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
-            "Welcome to *OdoBrain*! 🦾\n"
+            "Welcome to *OdoSight*! 🦾\n"
             "I connect your Odoo ERP to Gemini 3 AI for high-level financial intelligence.\n\n"
             "1️⃣ Use /setup to link your account.\n"
             "2️⃣ Ask me questions like: 'What are my top expenses?'\n"
@@ -96,7 +96,7 @@ class StandaloneCFOBot:
         session.commit()
         session.close()
         
-        await update.message.reply_text("✅ Setup Complete! Your OdoBrain is now live. Try asking a question!")
+        await update.message.reply_text("✅ Setup Complete! Your OdoSight is now live. Try asking a question!")
         return ConversationHandler.END
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
