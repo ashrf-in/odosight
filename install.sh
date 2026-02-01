@@ -1,5 +1,5 @@
 #!/bin/bash
-# Navo CFO Standalone Installer
+# OdoBrain Standalone Installer
 # Usage: curl -sSL https://raw.githubusercontent.com/ashrf-in/autonomous-cfo-app/master/install.sh | bash -s -- YOUR_BOT_TOKEN
 
 TOKEN=$1
@@ -10,7 +10,7 @@ if [ -z "$TOKEN" ]; then
     exit 1
 fi
 
-echo "🚀 Starting Navo CFO Installation..."
+echo "🚀 Starting OdoBrain Installation..."
 
 # Check for Docker
 if ! [ -x "$(command -v docker)" ]; then
@@ -24,15 +24,15 @@ cd autonomous-cfo-app
 mkdir -p data
 
 echo "🛠 Building Docker image..."
-docker build -t navo-cfo .
+docker build -t odobrain .
 
 echo "🏃 Launching CFO Bot..."
 docker run -d \
-  --name navo-cfo \
+  --name odobrain \
   --restart always \
   -e TELEGRAM_BOT_TOKEN="$TOKEN" \
   -v "$(pwd)/data:/app/data" \
-  navo-cfo
+  odobrain
 
-echo "✅ Done! Your Navo CFO is now running in the background."
+echo "✅ Done! Your OdoBrain is now running in the background."
 echo "📲 Go to Telegram and message your bot to start setup."
