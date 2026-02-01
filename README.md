@@ -20,15 +20,29 @@ This is a standalone Telegram bot that provides financial intelligence for Odoo 
    python3 main.py
    ```
 
-## 🚀 Quick Install (Docker One-Liner)
+## 🏁 Getting Started (Step-by-Step)
 
-Deploy the whole stack on any Linux server with a single command:
+### 1. Create your Telegram Bot
+1. Open Telegram and search for **@BotFather**.
+2. Start a chat and send `/newbot`.
+3. Give your bot a **Name** (e.g., *My OdoSight*) and a **Username** (e.g., *my_odosight_bot*).
+4. **Copy the API Token** provided (it looks like `123456789:ABCdef...`).
+
+### 2. Launch OdoSight
+Deploy the whole stack on any Linux server (with Docker installed) with a single command:
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/ashrf-in/odosight/master/install.sh | bash -s -- YOUR_TELEGRAM_BOT_TOKEN
 ```
+*(Replace `YOUR_TELEGRAM_BOT_TOKEN` with the token you got from @BotFather)*
 
-## Features
+### 3. Setup Odoo & Gemini
+1. Once the bot is running, find it on Telegram and type `/start`.
+2. Run the `/setup` command.
+3. Follow the prompts to enter your **Odoo URL**, **Database**, **Username**, **Password**, and **Gemini API Key**.
+4. You're all set! Start asking: *"What's our cash balance?"* or *"Any anomalies in the last moves?"*
+
+## 🛡️ Security & Privacy
 - **Standalone Onboarding**: Users run `/setup` to link their own Odoo and Gemini credentials.
 - **Natural Language Querying**: Users can ask financial questions in plain English/Arabic.
 - **Data Privacy**: Each user's data is isolated and queried only with their own credentials.
