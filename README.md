@@ -1,4 +1,4 @@
-# Autonomous CFO Standalone App
+# Navo CFO Standalone App
 
 This is a standalone Telegram bot that provides financial intelligence for Odoo ERP using Gemini 3.
 
