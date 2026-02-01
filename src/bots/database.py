@@ -1,7 +1,5 @@
-from sqlalchemy import create_all, Column, Integer, String, JSON
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
+from sqlalchemy import Column, Integer, String, JSON, create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 Base = declarative_base()
 
@@ -16,8 +14,6 @@ class UserConfig(Base):
     gemini_key = Column(String)
     settings = Column(JSON, default={})
 
-from src.bots.database import Session, UserConfig, engine
-# ...
 engine = create_engine('sqlite:///data/bot_users.db')
 Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
