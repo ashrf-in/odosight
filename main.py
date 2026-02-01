@@ -5,19 +5,21 @@ import asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
 
-# Add project root to path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+# Setup logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', 
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# Ensure current directory is in path for imports
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
 
 from src.connectors.odoo_client import OdooClient
 from src.logic.intelligence_engine import IntelligenceEngine
 from src.bots.database import Session, UserConfig
 from src.logic.security import encrypt_data, decrypt_data
-
-# Ensure internal imports work for standalone structure
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-# Setup logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Conversation states
 SETTING_PIN, SETTING_ODOO_URL, SETTING_ODOO_DB, SETTING_ODOO_USER, SETTING_ODOO_PWD, SETTING_GEMINI_KEY = range(6)
@@ -43,6 +45,7 @@ class StandaloneCFOBot:
         self.app.add_handler(CommandHandler('start', self.start))
         self.app.add_handler(CommandHandler('summary', self.get_summary))
         self.app.add_handler(conv_handler)
+        # Main query handler (also handles PIN entry if session is locked)
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_query))
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -113,7 +116,7 @@ class StandaloneCFOBot:
         await update.message.reply_text(
             "✅ **Setup Complete with Zero-Knowledge Encryption!**\n\n"
             "Your credentials are now scrambled in our database. Only your PIN can unlock them.\n"
-            "Try asking: 'What's my bank balance?' (I'll ask for your PIN the first time).",
+            "Try asking: 'What's my bank balance?'",
             parse_mode='Markdown'
         )
         return ConversationHandler.END
@@ -129,8 +132,8 @@ class StandaloneCFOBot:
             return
         
         await update.message.reply_text("Fetching 30-day summary... 📊")
-        # Logic to call finance_engine and format response
-        await update.message.reply_text("Summary logic connected! (Coming in next patch)")
+        # In a real app, this would call finance_engine
+        await update.message.reply_text("Summary module coming soon to OdoSight!")
 
     async def handle_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = self._get_user_config(update.effective_user.id)
@@ -138,17 +141,25 @@ class StandaloneCFOBot:
             await update.message.reply_text("Please run /setup first!")
             return
 
-        query = update.message.text
+        text = update.message.text
         
-        # Check if we have the PIN in the current session memory
+        # PIN Entry Logic
         if 'user_pin' not in context.user_data:
-            context.user_data['pending_query'] = query
-            await update.message.reply_text("🔐 Your session is locked. Please enter your **PIN** to continue:")
-            return
+            if 'pending_query' in context.user_data:
+                # User sent the PIN
+                context.user_data['user_pin'] = text
+                query = context.user_data.pop('pending_query')
+            else:
+                # Lock the session and wait for PIN
+                context.user_data['pending_query'] = text
+                await update.message.reply_text("🔐 Your session is locked. Please enter your **PIN** to continue:", parse_mode='Markdown')
+                return
+        else:
+            query = text
 
         pin = context.user_data['user_pin']
         
-        # Attempt decryption
+        # Attempt decryption and execution
         try:
             url = decrypt_data(user.odoo_url, pin)
             db = decrypt_data(user.odoo_db, pin)
@@ -165,10 +176,11 @@ class StandaloneCFOBot:
             answer = intelligence.ask(query)
             await update.message.reply_text(answer)
             
-        except Exception:
-            # If decryption fails, the PIN was wrong. Clear it.
+        except Exception as e:
+            # If decryption fails, the PIN was likely wrong
             context.user_data.pop('user_pin', None)
-            await update.message.reply_text("❌ Incorrect PIN. Session remains locked.")
+            logger.error(f"Execution error: {e}")
+            await update.message.reply_text("❌ Incorrect PIN or Connection Error. Session remains locked.")
 
     def _get_user_config(self, telegram_id):
         session = Session()
@@ -177,13 +189,13 @@ class StandaloneCFOBot:
         return user
 
     def run(self):
-        print("Bot is running...")
+        logger.info("OdoSight Bot is starting...")
         self.app.run_polling()
 
 if __name__ == "__main__":
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     if not token:
-        print("Missing TELEGRAM_BOT_TOKEN")
+        logger.error("Missing TELEGRAM_BOT_TOKEN environment variable.")
         sys.exit(1)
     bot = StandaloneCFOBot(token)
     bot.run()
