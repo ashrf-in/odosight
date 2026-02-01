@@ -20,6 +20,14 @@ This is a standalone Telegram bot that provides financial intelligence for Odoo 
    python3 main.py
    ```
 
+## 🚀 Quick Install (Docker One-Liner)
+
+Deploy the whole stack on any Linux server with a single command:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/ashrf-in/odosight/master/install.sh | bash -s -- YOUR_TELEGRAM_BOT_TOKEN
+```
+
 ## Features
 - **Standalone Onboarding**: Users run `/setup` to link their own Odoo and Gemini credentials.
 - **Natural Language Querying**: Users can ask financial questions in plain English/Arabic.
