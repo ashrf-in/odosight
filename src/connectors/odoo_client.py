@@ -25,6 +25,12 @@ class OdooClient:
     def execute_kw(self, model, method, *args, **kwargs):
         if not self.uid:
             self.authenticate()
+        
+        # Read-Only Safety Lock: Only allow read-based methods
+        allowed_methods = ['search', 'read', 'search_read', 'fields_get', 'get_version']
+        if method not in allowed_methods:
+            raise PermissionError(f"Write access denied: Method '{method}' is restricted in Read-Only mode.")
+            
         try:
             return self.models.execute_kw(self.db, self.uid, self.password, model, method, args, kwargs)
         except Exception as e:
@@ -47,13 +53,13 @@ class OdooClient:
         return self.execute_kw(model, 'search_read', domain, **kwargs)
 
     def create(self, model, values):
-        return self.execute_kw(model, 'create', values)
+        raise PermissionError("Create access denied (Read-Only Mode)")
 
     def write(self, model, ids, values):
-        return self.execute_kw(model, 'write', ids, values)
+        raise PermissionError("Write access denied (Read-Only Mode)")
 
     def unlink(self, model, ids):
-        return self.execute_kw(model, 'unlink', ids)
+        raise PermissionError("Delete access denied (Read-Only Mode)")
 
     def get_fields(self, model, attributes=None):
         attributes = attributes or ['string', 'help', 'type', 'relation']
