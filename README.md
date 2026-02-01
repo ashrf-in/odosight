@@ -40,7 +40,14 @@ curl -sSL https://raw.githubusercontent.com/ashrf-in/odosight/master/install.sh 
 1. Once the bot is running, find it on Telegram and type `/start`.
 2. Run the `/setup` command.
 3. Follow the prompts to enter your **Odoo URL**, **Database**, **Username**, **Password**, and **Gemini API Key**.
-4. You're all set! Start asking: *"What's our cash balance?"* or *"Any anomalies in the last moves?"*
+
+#### 🔑 How to get a Gemini API Key (Free)
+1. Go to [Google AI Studio](https://aistudio.google.com/).
+2. Log in with your Google account.
+3. Click on **"Get API key"** in the left sidebar.
+4. Click **"Create API key in new project"**.
+5. Copy your key (it starts with `AIza...`).
+6. Paste it into the bot when prompted during `/setup`.
 
 ## 🛡️ Security & Privacy
 - **Standalone Onboarding**: Users run `/setup` to link their own Odoo and Gemini credentials.
